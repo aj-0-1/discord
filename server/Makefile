@@ -32,3 +32,10 @@ migrate-down:
 
 run:
 	go run cmd/server/main.go
+
+GOPATH=$(shell go env GOPATH)
+
+swagger:
+	$(GOPATH)/bin/swag init -g cmd/server/main.go
+
+.PHONY: swagger

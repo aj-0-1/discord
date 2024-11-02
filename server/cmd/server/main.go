@@ -1,18 +1,24 @@
 package main
 
 import (
+	_ "discord/docs"
+	"discord/internal/auth"
+	"discord/internal/config"
 	"discord/internal/database"
 	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/render"
-
-	"discord/internal/auth"
-	"discord/internal/config"
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
+// @title Discord API
+// @version 1.0
+// @host localhost:8080
+// @BasePath /api
 func main() {
 	cfg, err := config.Load()
 	if err != nil {
@@ -31,7 +37,21 @@ func main() {
 	authHandler := auth.NewHandler(authService, tokenService)
 
 	r := chi.NewRouter()
-	r.Use(render.SetContentType(render.ContentTypeJSON))
+
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"http://localhost:3000"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
+		ExposedHeaders:   []string{"Link"},
+		AllowCredentials: true,
+		MaxAge:           300,
+	}))
+
+	r.Get("/swagger/*", httpSwagger.Handler(
+		httpSwagger.URL("http://localhost:8080/swagger/doc.json"),
+	))
 
 	r.Route("/api", func(r chi.Router) {
 		r.Mount("/auth", authHandler.Routes())

@@ -1,9 +1,8 @@
 package auth
 
 import (
-	"net/http"
-
 	"discord/internal/http/response"
+	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
