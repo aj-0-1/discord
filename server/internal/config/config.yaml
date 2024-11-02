@@ -1,0 +1,16 @@
+server:
+  port: 8080
+  read_timeout: 15s
+  write_timeout: 15s
+
+database:
+  host: "localhost"
+  port: 5432
+  user: "discord_user"
+  password: "discord_password"
+  dbname: "discord"
+  sslmode: "disable"
+
+jwt:
+  secret: "your-super-secret-key-change-this-in-production"
+  duration: "24h"
