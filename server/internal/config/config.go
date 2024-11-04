@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/rs/zerolog"
 	"github.com/spf13/viper"
 )
 
@@ -11,12 +12,13 @@ type Config struct {
 	Server   ServerConfig `mapstructure:"server"`
 	Database DBConfig     `mapstructure:"database"`
 	JWT      JWTConfig    `mapstructure:"jwt"`
+	Log      LogConfig    `mapstructure:"log"`
 }
 
 type ServerConfig struct {
-	Port         int    `mapstructure:"port"`
-	ReadTimeout  string `mapstructure:"read_timeout"`
-	WriteTimeout string `mapstructure:"write_timeout"`
+	Port         int           `mapstructure:"port"`
+	ReadTimeout  time.Duration `mapstructure:"read_timeout"`
+	WriteTimeout time.Duration `mapstructure:"write_timeout"`
 }
 
 type DBConfig struct {
@@ -33,6 +35,11 @@ type JWTConfig struct {
 	Duration time.Duration `mapstructure:"duration"`
 }
 
+type LogConfig struct {
+	Level  string `mapstructure:"level"`
+	Format string `mapstructure:"format"`
+}
+
 func Load() (*Config, error) {
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
@@ -46,8 +53,11 @@ func Load() (*Config, error) {
 	viper.SetDefault("database.port", 5432)
 	viper.SetDefault("database.sslmode", "disable")
 
-	viper.SetDefault("jwt.secret", "your-secret-key-here") // Should be overridden in production
+	viper.SetDefault("jwt.secret", "your-secret-key-here")
 	viper.SetDefault("jwt.duration", "24h")
+
+	viper.SetDefault("log.level", "info")
+	viper.SetDefault("log.format", "json")
 
 	if err := viper.ReadInConfig(); err != nil {
 		return nil, fmt.Errorf("error reading config: %w", err)
@@ -76,4 +86,27 @@ func validateConfig(cfg *Config) error {
 		return fmt.Errorf("jwt secret is required")
 	}
 	return nil
+}
+
+func InitLogger(cfg *LogConfig) zerolog.Logger {
+	level, err := zerolog.ParseLevel(cfg.Level)
+	if err != nil {
+		level = zerolog.InfoLevel
+	}
+
+	zerolog.SetGlobalLevel(level)
+	logger := zerolog.New(nil).
+		With().
+		Timestamp().
+		Str("service", "discord-api").
+		Logger()
+
+	return logger
+}
+
+func (c *DBConfig) GetDSN() string {
+	return fmt.Sprintf(
+		"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
+		c.Host, c.Port, c.User, c.Password, c.DBName, c.SSLMode,
+	)
 }

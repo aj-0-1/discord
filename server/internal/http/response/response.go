@@ -7,45 +7,44 @@ import (
 )
 
 type ErrResponse struct {
-    HTTPStatusCode int    `json:"-"`             // HTTP response status code
-    StatusText     string `json:"status"`        // User-level status message
-    ErrorText      string `json:"error,omitempty"` // Application-level error message
+	HTTPStatusCode int    `json:"-"`
+	StatusText     string `json:"status"`
+	ErrorText      string `json:"error,omitempty"`
 }
 
 func (e *ErrResponse) Render(w http.ResponseWriter, r *http.Request) error {
-    render.Status(r, e.HTTPStatusCode)
-    return nil
+	render.Status(r, e.HTTPStatusCode)
+	return nil
 }
 
-// Error response helpers
 func ErrInvalidRequest(err error) render.Renderer {
-    return &ErrResponse{
-        HTTPStatusCode: http.StatusBadRequest,
-        StatusText:    "Invalid request.",
-        ErrorText:     err.Error(),
-    }
+	return &ErrResponse{
+		HTTPStatusCode: http.StatusBadRequest,
+		StatusText:     "Invalid request.",
+		ErrorText:      err.Error(),
+	}
 }
 
 func ErrUnauthorized() render.Renderer {
-    return &ErrResponse{
-        HTTPStatusCode: http.StatusUnauthorized,
-        StatusText:    "Authentication failed.",
-        ErrorText:     "Invalid email or password.",
-    }
+	return &ErrResponse{
+		HTTPStatusCode: http.StatusUnauthorized,
+		StatusText:     "Authentication failed.",
+		ErrorText:      "Invalid email or password.",
+	}
 }
 
 func ErrConflict(message string) render.Renderer {
-    return &ErrResponse{
-        HTTPStatusCode: http.StatusConflict,
-        StatusText:    "Request conflict.",
-        ErrorText:     message,
-    }
+	return &ErrResponse{
+		HTTPStatusCode: http.StatusConflict,
+		StatusText:     "Request conflict.",
+		ErrorText:      message,
+	}
 }
 
 func ErrInternal(err error) render.Renderer {
-    return &ErrResponse{
-        HTTPStatusCode: http.StatusInternalServerError,
-        StatusText:    "Internal server error.",
-        ErrorText:     err.Error(),
-    }
+	return &ErrResponse{
+		HTTPStatusCode: http.StatusInternalServerError,
+		StatusText:     "Internal server error.",
+		ErrorText:      err.Error(),
+	}
 }

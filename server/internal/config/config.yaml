@@ -14,3 +14,7 @@ database:
 jwt:
   secret: "your-super-secret-key-change-this-in-production"
   duration: "24h"
+
+log:
+  level: info
+  format: json
