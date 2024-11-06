@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"discord/internal/auth"
+	"discord/internal/chat"
 	"discord/internal/config"
 	"discord/internal/database"
 	"fmt"
@@ -16,6 +17,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog"
 	httpSwagger "github.com/swaggo/http-swagger"
 
@@ -36,12 +38,26 @@ func main() {
 	}
 	defer db.Close()
 
+	redisClient := redis.NewClient(&redis.Options{
+		Addr:     cfg.Redis.Addr,
+		Password: cfg.Redis.Password,
+		DB:       cfg.Redis.DB,
+	})
+	defer redisClient.Close()
+
+	if err := redisClient.Ping(context.Background()).Err(); err != nil {
+		logger.Fatal().Err(err).Msg("failed to connect to redis")
+	}
+
 	authService := auth.NewService(
 		db,
 		[]byte(cfg.JWT.Secret),
 		&logger,
 	)
 	authHandler := auth.NewHandler(authService, &logger)
+
+	chatService := chat.NewService(db, redisClient, &logger)
+	chatHandler := chat.NewHandler(chatService, &logger)
 
 	r := chi.NewRouter()
 
@@ -67,6 +83,7 @@ func main() {
 
 		r.Group(func(r chi.Router) {
 			r.Use(authService.Middleware)
+			r.Mount("/chat", chatHandler.Routes())
 		})
 	})
 

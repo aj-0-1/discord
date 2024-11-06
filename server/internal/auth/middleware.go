@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/rs/zerolog"
 )
@@ -34,7 +36,13 @@ func (s *Service) Middleware(next http.Handler) http.Handler {
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), KeyUserID, userID)
+		parsedID, err := uuid.Parse(userID)
+		if err != nil {
+			http.Error(w, "invalid user id", http.StatusInternalServerError)
+			return
+		}
+
+		ctx := context.WithValue(r.Context(), KeyUserID, parsedID)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

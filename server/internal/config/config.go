@@ -13,6 +13,7 @@ type Config struct {
 	Database DBConfig     `mapstructure:"database"`
 	JWT      JWTConfig    `mapstructure:"jwt"`
 	Log      LogConfig    `mapstructure:"log"`
+	Redis    RedisConfig  `mapstructure:"redis"`
 }
 
 type ServerConfig struct {
@@ -40,6 +41,12 @@ type LogConfig struct {
 	Format string `mapstructure:"format"`
 }
 
+type RedisConfig struct {
+	Addr     string `mapstructure:"addr"`
+	Password string `mapstructure:"password"`
+	DB       int    `mapstructure:"db"`
+}
+
 func Load() (*Config, error) {
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
@@ -58,6 +65,10 @@ func Load() (*Config, error) {
 
 	viper.SetDefault("log.level", "info")
 	viper.SetDefault("log.format", "json")
+
+	viper.SetDefault("redis.addr", "localhost:6379")
+	viper.SetDefault("redis.password", "")
+	viper.SetDefault("redis.db", 0)
 
 	if err := viper.ReadInConfig(); err != nil {
 		return nil, fmt.Errorf("error reading config: %w", err)
@@ -84,6 +95,9 @@ func validateConfig(cfg *Config) error {
 	}
 	if cfg.JWT.Secret == "" {
 		return fmt.Errorf("jwt secret is required")
+	}
+	if cfg.Redis.Addr == "" {
+		return fmt.Errorf("redis address is required")
 	}
 	return nil
 }

@@ -18,3 +18,8 @@ jwt:
 log:
   level: info
   format: json
+
+redis:
+  addr: "localhost:6379"
+  password: ""
+  db: 0
