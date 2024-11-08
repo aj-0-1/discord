@@ -42,6 +42,15 @@ func (h *Handler) Routes() chi.Router {
 	return r
 }
 
+// @Summary WebSocket connection
+// @Description Connect to WebSocket for real-time messages
+// @Tags chat
+// @Accept json
+// @Produce json
+// @Param Authorization header string true "Bearer token"
+// @Success 101 {string} string "Switching protocols"
+// @Failure 401 {string} string "Unauthorized"
+// @Router /chat/ws [get]
 func (h *Handler) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	// The auth middleware should have already verified the token and added userID to context
 	userID, ok := r.Context().Value(auth.KeyUserID).(uuid.UUID)
@@ -81,6 +90,17 @@ func (h *Handler) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	go client.readPump()
 }
 
+// @Summary Send message
+// @Description Send a private message to another user
+// @Tags chat
+// @Accept json
+// @Produce json
+// @Param Authorization header string true "Bearer token"
+// @Param request body Message true "Message content"
+// @Success 200 {object} Message
+// @Failure 400 {string} string "Invalid request"
+// @Failure 401 {string} string "Unauthorized"
+// @Router /chat/messages [post]
 func (h *Handler) handleSendMessage(w http.ResponseWriter, r *http.Request) {
 	var msg struct {
 		ToID    string `json:"toId"`
@@ -122,6 +142,16 @@ func (h *Handler) handleSendMessage(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(message)
 }
 
+// @Summary Get messages
+// @Description Get chat messages with another user
+// @Tags chat
+// @Accept json
+// @Produce json
+// @Param Authorization header string true "Bearer token"
+// @Param userID path string true "User ID to get messages with"
+// @Success 200 {array} Message
+// @Failure 401 {string} string "Unauthorized"
+// @Router /chat/messages/{userID} [get]
 func (h *Handler) handleGetMessages(w http.ResponseWriter, r *http.Request) {
 	// Get the userID from URL parameters
 	userID := chi.URLParam(r, "userID")

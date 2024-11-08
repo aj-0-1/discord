@@ -14,11 +14,29 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// @title Discord API
+// @version 1.0
+// @description API for discord clone
+// @host localhost:8080
+// @BasePath /api
+
+// LoginRequest represents login credentials
+// @Description Login request body
 type LoginRequest struct {
 	Email    string `json:"email" validate:"required,email"`
 	Password string `json:"password" validate:"required,min=8"`
 }
 
+// @Summary Login user
+// @Description Login with email and password
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body LoginRequest true "Login credentials"
+// @Success 200 {object} AuthResponse
+// @Failure 400 {string} string "Invalid request"
+// @Failure 401 {string} string "Invalid credentials"
+// @Router /auth/login [post]
 type RegisterRequest struct {
 	Email    string `json:"email" validate:"required,email"`
 	Password string `json:"password" validate:"required,min=8"`

@@ -9,3 +9,12 @@ export { BaseHttpRequest } from './core/BaseHttpRequest';
 export { CancelablePromise, CancelError } from './core/CancelablePromise';
 export { OpenAPI } from './core/OpenAPI';
 export type { OpenAPIConfig } from './core/OpenAPI';
+
+export type { auth_AuthResponse } from './models/auth_AuthResponse';
+export type { auth_LoginRequest } from './models/auth_LoginRequest';
+export type { auth_RegisterRequest } from './models/auth_RegisterRequest';
+export type { auth_User } from './models/auth_User';
+export type { chat_Message } from './models/chat_Message';
+
+export { AuthService } from './services/AuthService';
+export { ChatService } from './services/ChatService';
