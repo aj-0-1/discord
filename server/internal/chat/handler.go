@@ -1,7 +1,6 @@
 package chat
 
 import (
-	"discord/internal/auth"
 	"encoding/json"
 	"net/http"
 
@@ -36,7 +35,7 @@ func (h *Handler) Routes() chi.Router {
 	r := chi.NewRouter()
 
 	r.Post("/messages", h.handleSendMessage)
-	r.Get("/messages/{userID}", h.handleGetMessages) // This line needed fixing
+	r.Get("/messages/{userID}", h.handleGetMessages)
 	r.Get("/ws", h.handleWebSocket)
 
 	return r
@@ -52,8 +51,7 @@ func (h *Handler) Routes() chi.Router {
 // @Failure 401 {string} string "Unauthorized"
 // @Router /chat/ws [get]
 func (h *Handler) handleWebSocket(w http.ResponseWriter, r *http.Request) {
-	// The auth middleware should have already verified the token and added userID to context
-	userID, ok := r.Context().Value(auth.KeyUserID).(uuid.UUID)
+	userID, ok := r.Context().Value("userID").(uuid.UUID)
 	if !ok {
 		h.log.Error().Msg("user ID not found in context")
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
@@ -65,7 +63,6 @@ func (h *Handler) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		Str("remoteAddr", r.RemoteAddr).
 		Msg("websocket connection attempt")
 
-	// Upgrade connection
 	conn, err := h.upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		h.log.Error().Err(err).Msg("failed to upgrade connection")
@@ -111,14 +108,12 @@ func (h *Handler) handleSendMessage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	// Get sender ID from context as UUID
-	fromID, ok := r.Context().Value(auth.KeyUserID).(uuid.UUID)
+	fromID, ok := r.Context().Value("userID").(uuid.UUID)
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	// Parse toID into UUID
 	toID, err := uuid.Parse(msg.ToID)
 	if err != nil {
 		http.Error(w, "invalid recipient id", http.StatusBadRequest)
@@ -153,17 +148,13 @@ func (h *Handler) handleSendMessage(w http.ResponseWriter, r *http.Request) {
 // @Failure 401 {string} string "Unauthorized"
 // @Router /chat/messages/{userID} [get]
 func (h *Handler) handleGetMessages(w http.ResponseWriter, r *http.Request) {
-	// Get the userID from URL parameters
 	userID := chi.URLParam(r, "userID")
-
-	// Get sender ID from context
-	fromID, ok := r.Context().Value(auth.KeyUserID).(uuid.UUID)
+	fromID, ok := r.Context().Value("userID").(uuid.UUID)
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	// Parse the target user ID from URL parameter
 	toID, err := uuid.Parse(userID)
 	if err != nil {
 		http.Error(w, "invalid user id", http.StatusBadRequest)

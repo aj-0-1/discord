@@ -2,7 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-export type auth_User = {
+export type user_User = {
     createdAt?: string;
     email?: string;
     id?: string;

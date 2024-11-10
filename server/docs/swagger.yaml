@@ -1,10 +1,11 @@
+basePath: /api
 definitions:
   auth.AuthResponse:
     properties:
       token:
         type: string
       user:
-        $ref: '#/definitions/auth.User'
+        $ref: '#/definitions/user.User'
     type: object
   auth.LoginRequest:
     description: Login request body
@@ -35,19 +36,6 @@ definitions:
     - password
     - username
     type: object
-  auth.User:
-    properties:
-      createdAt:
-        type: string
-      email:
-        type: string
-      id:
-        type: string
-      updatedAt:
-        type: string
-      username:
-        type: string
-    type: object
   chat.Message:
     properties:
       content:
@@ -63,8 +51,25 @@ definitions:
       updatedAt:
         type: string
     type: object
+  user.User:
+    properties:
+      createdAt:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      updatedAt:
+        type: string
+      username:
+        type: string
+    type: object
+host: localhost:8080
 info:
   contact: {}
+  description: A Discord clone API
+  title: Discord API
+  version: "1.0"
 paths:
   /auth/login:
     post:
@@ -218,4 +223,40 @@ paths:
       summary: WebSocket connection
       tags:
       - chat
+  /users/search:
+    get:
+      consumes:
+      - application/json
+      description: Search users by username or email
+      parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Search query
+        in: query
+        name: q
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/user.User'
+            type: array
+        "400":
+          description: Bad request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      summary: Search users
+      tags:
+      - users
 swagger: "2.0"

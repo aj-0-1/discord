@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"database/sql"
+	"discord/internal/user"
 	"errors"
 	"fmt"
 	"time"
@@ -44,17 +45,8 @@ type RegisterRequest struct {
 }
 
 type AuthResponse struct {
-	Token string `json:"token"`
-	User  *User  `json:"user"`
-}
-
-type User struct {
-	ID           string    `json:"id" db:"id"`
-	Email        string    `json:"email" db:"email"`
-	Username     string    `json:"username" db:"username"`
-	PasswordHash string    `json:"-" db:"password_hash"`
-	CreatedAt    time.Time `json:"createdAt" db:"created_at"`
-	UpdatedAt    time.Time `json:"updatedAt" db:"updated_at"`
+	Token string     `json:"token"`
+	User  *user.User `json:"user"`
 }
 
 type Claims struct {
@@ -63,9 +55,9 @@ type Claims struct {
 }
 
 type Service struct {
-	db  *sql.DB
-	key []byte
-	log *zerolog.Logger
+	userService *user.Service
+	key         []byte
+	log         *zerolog.Logger
 }
 
 var (
@@ -90,103 +82,21 @@ func isUsernameConstraint(err error) bool {
 	return ok && pgErr.Constraint == "users_username_key"
 }
 
-func NewService(db *sql.DB, jwtKey []byte, log *zerolog.Logger) *Service {
+func NewService(userService *user.Service, jwtKey []byte, log *zerolog.Logger) *Service {
 	return &Service{
-		db:  db,
-		key: jwtKey,
-		log: log,
+		userService: userService,
+		key:         jwtKey,
+		log:         log,
 	}
-}
-
-func (s *Service) Register(ctx context.Context, req RegisterRequest) (*AuthResponse, error) {
-	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
-	if err != nil {
-		return nil, fmt.Errorf("hash password: %w", err)
-	}
-
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return nil, fmt.Errorf("begin transaction: %w", err)
-	}
-	defer tx.Rollback()
-
-	now := time.Now()
-	user := &User{
-		ID:           uuid.New().String(),
-		Email:        req.Email,
-		Username:     req.Username,
-		PasswordHash: string(hash),
-		CreatedAt:    now,
-		UpdatedAt:    now,
-	}
-
-	const q = `
-        INSERT INTO users (id, email, username, password_hash, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6)
-        RETURNING id, email, username, created_at, updated_at`
-
-	err = tx.QueryRowContext(ctx, q,
-		user.ID,
-		user.Email,
-		user.Username,
-		user.PasswordHash,
-		user.CreatedAt,
-		user.UpdatedAt,
-	).Scan(
-		&user.ID,
-		&user.Email,
-		&user.Username,
-		&user.CreatedAt,
-		&user.UpdatedAt,
-	)
-	if err != nil {
-		if isPgUniqueViolation(err) {
-			if isEmailConstraint(err) {
-				return nil, ErrUserExistsWithEmail
-			}
-			if isUsernameConstraint(err) {
-				return nil, ErrUserExistsWithUsername
-			}
-			return nil, fmt.Errorf("insert user: %w", err)
-		}
-		return nil, fmt.Errorf("insert user: %w", err)
-	}
-
-	if err := tx.Commit(); err != nil {
-		return nil, fmt.Errorf("commit transaction: %w", err)
-	}
-
-	token, err := s.createToken(user.ID)
-	if err != nil {
-		return nil, fmt.Errorf("create token: %w", err)
-	}
-
-	return &AuthResponse{
-		Token: token,
-		User:  user,
-	}, nil
 }
 
 func (s *Service) Login(ctx context.Context, req LoginRequest) (*AuthResponse, error) {
-	var user User
-	const q = `
-        SELECT id, email, username, password_hash, created_at, updated_at
-        FROM users
-        WHERE email = $1`
-
-	err := s.db.QueryRowContext(ctx, q, req.Email).Scan(
-		&user.ID,
-		&user.Email,
-		&user.Username,
-		&user.PasswordHash,
-		&user.CreatedAt,
-		&user.UpdatedAt,
-	)
+	user, err := s.userService.GetByEmail(ctx, req.Email)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, ErrInvalidCredentials
 		}
-		return nil, fmt.Errorf("query user: %w", err)
+		return nil, fmt.Errorf("get user: %w", err)
 	}
 
 	if err := bcrypt.CompareHashAndPassword(
@@ -203,7 +113,45 @@ func (s *Service) Login(ctx context.Context, req LoginRequest) (*AuthResponse, e
 
 	return &AuthResponse{
 		Token: token,
-		User:  &user,
+		User:  user,
+	}, nil
+}
+
+func (s *Service) Register(ctx context.Context, req RegisterRequest) (*AuthResponse, error) {
+	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, fmt.Errorf("hash password: %w", err)
+	}
+
+	user := &user.User{
+		ID:           uuid.New().String(),
+		Email:        req.Email,
+		Username:     req.Username,
+		PasswordHash: string(hash),
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
+	}
+
+	if err := s.userService.Create(ctx, user); err != nil {
+		if isPgUniqueViolation(err) {
+			if isEmailConstraint(err) {
+				return nil, ErrUserExistsWithEmail
+			}
+			if isUsernameConstraint(err) {
+				return nil, ErrUserExistsWithUsername
+			}
+		}
+		return nil, fmt.Errorf("create user: %w", err)
+	}
+
+	token, err := s.createToken(user.ID)
+	if err != nil {
+		return nil, fmt.Errorf("create token: %w", err)
+	}
+
+	return &AuthResponse{
+		Token: token,
+		User:  user,
 	}, nil
 }
 

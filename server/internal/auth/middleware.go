@@ -12,10 +12,6 @@ import (
 	"github.com/rs/zerolog"
 )
 
-type contextKey string
-
-const KeyUserID = contextKey("userID")
-
 func (s *Service) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")
@@ -32,6 +28,7 @@ func (s *Service) Middleware(next http.Handler) http.Handler {
 
 		userID, err := s.VerifyToken(parts[1])
 		if err != nil {
+			s.log.Print("Failed to verify token")
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -42,7 +39,7 @@ func (s *Service) Middleware(next http.Handler) http.Handler {
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), KeyUserID, parsedID)
+		ctx := context.WithValue(r.Context(), "userID", parsedID)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

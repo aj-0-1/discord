@@ -62,17 +62,14 @@ func (s *Service) SendMessage(ctx context.Context, msg *Message) error {
 		return fmt.Errorf("failed to store message: %w", err)
 	}
 
-	// Publish to Redis with proper channel naming
 	channel := fmt.Sprintf("user:%s:messages", msg.ToID.String())
 
-	// Redis will use the MarshalBinary method automatically
 	if err := s.redis.Publish(ctx, channel, msg).Err(); err != nil {
 		s.log.Error().Err(err).
 			Str("channel", channel).
 			Str("fromId", msg.FromID.String()).
 			Str("toId", msg.ToID.String()).
 			Msg("failed to publish message to redis")
-		// Don't return error as message is already stored
 	} else {
 		s.log.Info().
 			Str("channel", channel).

@@ -6,6 +6,7 @@ import (
 	"discord/internal/chat"
 	"discord/internal/config"
 	"discord/internal/database"
+	"discord/internal/user"
 	"fmt"
 	"log"
 	"net/http"
@@ -24,6 +25,11 @@ import (
 	_ "discord/docs"
 )
 
+// @title Discord API
+// @version 1.0
+// @description A Discord clone API
+// @host localhost:8080
+// @BasePath /api
 func main() {
 	cfg, err := config.Load()
 	if err != nil {
@@ -49,14 +55,12 @@ func main() {
 		logger.Fatal().Err(err).Msg("failed to connect to redis")
 	}
 
-	authService := auth.NewService(
-		db,
-		[]byte(cfg.JWT.Secret),
-		&logger,
-	)
-	authHandler := auth.NewHandler(authService, &logger)
-
+	userService := user.NewService(db, &logger)
+	authService := auth.NewService(userService, []byte(cfg.JWT.Secret), &logger)
 	chatService := chat.NewService(db, redisClient, &logger)
+
+	userHandler := user.NewHandler(userService, &logger)
+	authHandler := auth.NewHandler(authService, &logger)
 	chatHandler := chat.NewHandler(chatService, &logger)
 
 	r := chi.NewRouter()
@@ -75,7 +79,7 @@ func main() {
 	}))
 
 	r.Get("/swagger/*", httpSwagger.Handler(
-		httpSwagger.URL("http://localhost:8080/swagger/doc.json"),
+		httpSwagger.URL("/swagger/doc.json"),
 	))
 
 	r.Route("/api", func(r chi.Router) {
@@ -83,6 +87,7 @@ func main() {
 
 		r.Group(func(r chi.Router) {
 			r.Use(authService.Middleware)
+			r.Mount("/users", userHandler.Routes())
 			r.Mount("/chat", chatHandler.Routes())
 		})
 	})

@@ -27,8 +27,7 @@ const (
 )
 
 type Hub struct {
-	// Map of user ID (UUID string) to their clients
-	clients    map[string]map[*Client]bool // Key is userID.String()
+	clients    map[string]map[*Client]bool
 	register   chan *Client
 	unregister chan *Client
 	redis      *redis.Client

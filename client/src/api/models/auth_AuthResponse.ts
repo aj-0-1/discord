@@ -2,9 +2,9 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-import type { auth_User } from './auth_User';
+import type { user_User } from './user_User';
 export type auth_AuthResponse = {
     token?: string;
-    user?: auth_User;
+    user?: user_User;
 };
 
